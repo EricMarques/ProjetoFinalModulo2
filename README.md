@@ -351,3 +351,121 @@ Depois de `python -m src.carregar`, o banco foi conferido com a prova real e com
 **Teste de falha e rollback:** para verificar o controle de falhas da carga, o nome de uma coluna da fato foi alterado de propósito (`numero_controle_pnc`, sem o "e" final) em `src/carregar.py`. A carga inseriu as 4 dimensões, falhou ao montar a fato e terminou com a mensagem "Falha na carga, alteracoes desfeitas". Em seguida, a contagem de `dim_orgao`, `dim_fornecedor`, `dim_modalidade`, `dim_localidade` e `fato_item_contratado` retornou 0 em todas, o que confirma que o `rollback` desfez as inserções que estavam pendentes e o banco não fica com dados pela metade. Depois do teste, o nome da coluna foi corrigido e a carga rodada de novo.
 
 **Fornecedor sem documento:** nenhuma linha `NAO-INFORMADO` foi criada em `dim_fornecedor` (contagem 0), então não foi necessária a linha "Não informado" (sk = -1) e nenhum fornecedor sem documento distorce o ranking de concentração.
+
+
+## 9. Respostas às perguntas de negócio (SQL)
+ 
+As consultas estão em `sql/02_perguntas.sql`, e os resultados abaixo vêm da execução no banco `pncp_controladoria`. Todos os percentuais são soma ÷ soma, e a economia só considera os itens comparáveis.
+ 
+### Pergunta 1 – Economia global do Poder Público
+ 
+| Indicador | Valor |
+|---|---|
+| Itens na fato | 6.126 |
+| Itens comparáveis | 5.457 (89,08%) |
+| Volume homologado total | R$ 8.044.498.805,74 |
+| Estimado (itens comparáveis) | R$ 6.867.663.469,91 |
+| Homologado (itens comparáveis) | R$ 5.874.801.782,96 |
+| **Economia nominal** | **R$ 992.861.686,95** |
+| **Economia %** | **14,46%** |
+ 
+**Itens com sobrepreço** (homologado maior que o estimado): 60 na fato inteira e **27** entre os itens comparáveis. O valor de 27 informado no enunciado corresponde, portanto, à contagem só entre os comparáveis.
+ 
+**Leitura:** nos itens comparáveis, o governo pagou 14,46% abaixo do estimado, o que representa R$ 992,86 milhões de economia sobre R$ 6,87 bilhões estimados. Os 669 itens não comparáveis (Credenciamento e razão fora de 0,1 a 10) ficam fora do cálculo, mas entram no volume.
+ 
+### Pergunta 2 – Concentração e risco de fornecedores
+ 
+Os 10 maiores fornecedores por volume homologado (fornecedor = CNPJ/CPF já limpo):
+ 
+| # | Fornecedor | CNPJ | Itens | Volume (R$) | % do volume total |
+|---|---|---|---|---|---|
+| 1 | NOW SEGUROS SA | 46973571000103 | 1 | 1.060.000.000,00 | 13,18% |
+| 2 | CONSTRUTORA CIDADE LIMITADA | 92943398000118 | 1 | 524.935.394,97 | 6,53% |
+| 3 | BANCO BRADESCO S.A. | 60746948000112 | 1 | 379.194.320,07 | 4,71% |
+| 4 | CONSTRUTORA NORTE BRASIL LTDA. | 31596625000191 | 1 | 335.401.470,80 | 4,17% |
+| 5 | LCM CONSTRUCAO E COMERCIO S.A | 19758842000135 | 1 | 228.885.493,53 | 2,85% |
+| 6 | CONSTRUTORA OTIMA LTDA | 45776055000126 | 1 | 192.344.816,46 | 2,39% |
+| 7 | CONPATE ENGENHARIA LTDA | 41320417000119 | 1 | 166.644.303,41 | 2,07% |
+| 8 | INDIGO HIVE CONSULTORIA EM TECNOLOGIA DA INFORMACAO S.A. | 38217648000197 | 1 | 160.000.000,00 | 1,99% |
+| 9 | CONSTRUTORA HIDROS LTDA | 12066346000171 | 1 | 159.193.730,62 | 1,98% |
+| 10 | ARTELESTE CONSTRUCOES LIMITADA | 75911438000120 | 1 | 125.884.500,00 | 1,56% |
+ 
+Juntos, os 10 maiores somam **R$ 3.332.484.029,86, ou 41,43%** do volume homologado total.
+ 
+**Leitura:** cada um dos 10 maiores aparece com apenas 1 item. A concentração vem de poucos itens de valor muito alto, e não de fornecedores com muitos contratos: só o primeiro (NOW SEGUROS SA) responde por 13,18% de todo o volume.
+ 
+### Pergunta 3 – Eficácia por modalidade
+ 
+| Modalidade | Itens | Volume (R$) | % do volume | Economia % |
+|---|---|---|---|---|
+| Pregão - Eletrônico | 3.046 | 502.223.491,28 | 6,24% | 24,02% |
+| Concorrência - Eletrônica | 521 | 4.700.493.122,98 | 58,43% | 14,27% |
+| Inexigibilidade | 503 | 213.365.238,19 | 2,65% | 8,77% |
+| Concorrência - Presencial | 63 | 444.752.757,18 | 5,53% | 6,79% |
+| Dispensa | 1.387 | 39.887.350,44 | 0,50% | 4,49% |
+| Pregão - Presencial | 5 | 2.475.288,51 | 0,03% | 0,02% |
+| Credenciamento | 601 | 2.141.301.557,16 | 26,62% | — |
+ 
+**Leitura:** o Pregão Eletrônico tem o maior deságio (24,02%), mas movimenta só 6,24% do volume. A Concorrência Eletrônica concentra 58,43% dos recursos, com 14,27% de economia. O Credenciamento responde por 26,62% do volume e não tem economia calculada, porque nenhum de seus itens é comparável (o estimado é um teto global).
+ 
+### Pergunta 4 – Tempo do ciclo de compras
+ 
+**Visão geral:** 5.896 itens com ciclo, 230 sem ciclo (homologação anterior à publicação), ciclo médio de 48,1 dias e máximo de 611 dias.
+ 
+Órgãos com maior ciclo médio, considerando só órgãos com 5 ou mais itens com ciclo (agrupados pelo nome padronizado):
+ 
+| Órgão | Unidades | Itens com ciclo | Ciclo médio (dias) | Máximo (dias) |
+|---|---|---|---|---|
+| UNIVERSIDADE FEDERAL DE CAMPINA GRANDE | 1 | 16 | 266,3 | 309 |
+| CONSELHO FEDERAL DE ENGENHARIA E AGRONOMIA | 1 | 20 | 223,0 | 223 |
+| DNIT - DEPARTAMENTO NACIONAL DE INFRAEST DE TRANSPORTES | 12 | 62 | 156,2 | 437 |
+| UNIVERSIDADE FEDERAL DO ESTADO DO RIO DE JANEIRO | 1 | 26 | 135,4 | 176 |
+| INSTITUTO FEDERAL DE EDUCACAO,CIENCIA E TECNOLOGIA DE RONDONIA | 1 | 9 | 125,0 | 226 |
+| UNIVERSIDADE FEDERAL DE ALAGOAS | 1 | 34 | 108,0 | 370 |
+| INSTITUTO FEDERAL DE EDUCACAO, CIENCIA E TECNOLOGIA DO PARANA | 1 | 30 | 107,8 | 155 |
+| UNIVERSIDADE FEDERAL DO RIO GRANDE DO NORTE | 1 | 123 | 101,7 | 378 |
+| CONSELHO REGIONAL DE MEDICINA DO ESTADO DE MINAS GERAIS | 1 | 6 | 100,3 | 111 |
+| DEFENSORIA PUBLICA DA UNIAO | 1 | 11 | 100,0 | 154 |
+ 
+**Leitura:** os maiores ciclos médios estão na Universidade Federal de Campina Grande (266,3 dias) e no Conselho Federal de Engenharia e Agronomia (223,0 dias), bem acima da média geral de 48,1 dias. O DNIT é o único da lista com várias unidades compradoras (12) e tem ciclo médio de 156,2 dias.
+ 
+### Pergunta 5 – Distribuição regional
+ 
+Por região:
+ 
+| Região | Unidades compradoras | Itens | Volume (R$) | % do volume | Economia % |
+|---|---|---|---|---|---|
+| Centro-Oeste | 107 | 940 | 3.559.879.991,73 | 44,25% | 17,02% |
+| Nordeste | 106 | 1.155 | 1.850.420.285,02 | 23,00% | 14,18% |
+| Sudeste | 120 | 2.072 | 1.083.309.811,49 | 13,47% | 11,62% |
+| Sul | 65 | 1.325 | 1.021.624.955,41 | 12,70% | 7,96% |
+| Norte | 59 | 634 | 529.263.762,09 | 6,58% | 21,43% |
+ 
+Dez estados com maior volume:
+ 
+| UF | Estado | Região | Unidades compradoras | Itens | Volume (R$) | % do volume | Economia % |
+|---|---|---|---|---|---|---|---|
+| DF | Distrito Federal | Centro-Oeste | 78 | 585 | 3.135.638.456,35 | 38,98% | 15,90% |
+| RS | Rio Grande do Sul | Sul | 31 | 845 | 820.584.056,64 | 10,20% | 7,18% |
+| RJ | Rio de Janeiro | Sudeste | 46 | 933 | 461.925.602,27 | 5,74% | 11,57% |
+| PI | Piauí | Nordeste | 11 | 70 | 408.389.525,89 | 5,08% | 5,98% |
+| SP | São Paulo | Sudeste | 41 | 517 | 393.783.392,48 | 4,90% | 9,22% |
+| PE | Pernambuco | Nordeste | 31 | 170 | 277.610.822,64 | 3,45% | 18,75% |
+| CE | Ceará | Nordeste | 21 | 160 | 273.063.635,47 | 3,39% | 7,88% |
+| BA | Bahia | Nordeste | 29 | 222 | 243.705.954,94 | 3,03% | 25,01% |
+| MT | Mato Grosso | Centro-Oeste | 15 | 77 | 240.920.586,26 | 2,99% | 25,84% |
+| AC | Acre | Norte | 9 | 40 | 207.336.488,34 | 2,58% | 26,71% |
+ 
+**Leitura:** o Distrito Federal concentra 38,98% do volume (e o Centro-Oeste, 44,25%). Em desconto, o Norte lidera entre as regiões (21,43%) e o Sul tem o menor (7,96%). Entre os estados, os maiores deságios estão no Acre (26,71%), em Mato Grosso (25,84%) e na Bahia (25,01%), todos com volume bem menor que o do DF.
+ 
+**Observação:** as unidades compradoras por UF somam 609 e por região somam 457, acima dos 363 CNPJs de órgãos. Isso indica que a localidade vem da contratação (`uf_sigla` de `compras.csv`) e que alguns CNPJs aparecem em mais de uma UF. Por isso os valores de unidades não devem ser somados entre linhas.
+ 
+### Pergunta 6 – Perfil dos gastos
+ 
+| Perfil | Itens | Volume (R$) | % do volume | Ticket médio (R$) | Economia % |
+|---|---|---|---|---|---|
+| Obras e engenharia | 967 | 4.892.362.732,70 | 60,8% | 5.059.320,30 | 14,17% |
+| Serviços | 1.849 | 2.940.950.885,18 | 36,6% | 1.590.562,94 | 16,11% |
+| Bens | 3.310 | 211.185.187,86 | 2,6% | 63.802,17 | 14,19% |
+ 
+**Leitura:** Obras e engenharia respondem por 60,8% do volume com apenas 967 itens, e seu ticket médio (R$ 5,06 milhões) é muito maior que o de Bens (R$ 63,8 mil). Bens são 54% dos itens (3.310 de 6.126), mas só 2,6% dos recursos. Serviços têm a maior economia entre os perfis (16,11%).

@@ -58,6 +58,7 @@ src/
   limpeza.py          funções de limpeza de texto, documentos, números e datas
   montar_tabelas.py   aplica as regras de negócio e gera a fato e as dimensões
   carregar.py         carga no MySQL
+  auditoria.py        conta os problemas dos CSVs brutos, antes da limpeza
 sql/
   01_criar_banco.sql  criação do banco e das tabelas do modelo estrela
 ```
@@ -80,6 +81,7 @@ Copie `.env.example` para `.env` e preencha usuário, senha, host e porta do seu
 
 **3. Rodar o pipeline, nesta ordem**
 ```
+python -m src.auditoria         # (opcional) conta os problemas dos CSVs brutos
 python -m src.limpeza            # autoteste das funções de limpeza
 python -m src.montar_tabelas     # gera a fato e as dimensões em data/processed/
 python -m src.carregar           # cria o banco e carrega as tabelas no MySQL
@@ -87,24 +89,111 @@ python -m src.carregar           # cria o banco e carrega as tabelas no MySQL
 
 > Os scripts são executados com `python -m src.nome` (como módulo), e não com `python src\nome.py`. Na segunda forma o Python não encontra o pacote `src` e dá `ModuleNotFoundError`.
 
-## 5. Dados brutos e problemas tratados
+## 5. Auditoria dos dados brutos
 
-| Arquivo | Linhas |
+A auditoria foi feita sobre os CSVs de `data/raw/` lidos como texto (`dtype=str`), antes de qualquer limpeza, com o script `src/auditoria.py` (`python -m src.auditoria`). As contagens abaixo respondem às perguntas da etapa de diagnóstico: quantas linhas há, se existem chaves repetidas, quais formatos de documento, dinheiro e data aparecem, onde há nulos disfarçados e acentos quebrados e se existem homologações anteriores à publicação.
+
+### 5.1 Estrutura e chaves
+
+| Verificação | Resultado |
 |---|---|
-| compras.csv | 2.042 |
-| itens.csv | 7.077 |
-| resultados.csv | 15.896 |
+| Linhas de `compras.csv` / `itens.csv` / `resultados.csv` | 2.042 / 7.077 / 15.896 |
+| `numero_controle_pncp` repetido em `compras.csv` | 0 |
+| Chave de item (`numero_controle_pncp` + `numero_item`) repetida em `itens.csv` | 0 |
+| Itens com `tem_resultado` verdadeiro / falso | 6.225 / 852 |
+| Itens sem nenhum resultado válido (sem resultado ou só cancelados) | 852 |
+| Resultados cancelados (`data_cancelamento` preenchida) | 62 |
+| Itens com mais de um resultado classificado (Registro de Preços) | 466 |
 
-Problemas da base que o pipeline trata:
+### 5.2 Documentos (CNPJ/CPF)
 
-| Problema | Onde |
+| Coluna | Problema | Registros afetados |
+|---|---|---|
+| `cnpj_orgao` (compras) | zero à esquerda perdido | 77 de 2.042 (3,8%) |
+| `cnpj_orgao` (compras) | com máscara (pontos, barra, hífen) | 176 |
+| `ni_fornecedor` (resultados) | zero à esquerda perdido | 353 de 15.896 (2,2%) |
+| `ni_fornecedor` (resultados) | com máscara, exceto estrangeiros | 1.631 |
+| `ni_fornecedor` (resultados) | estrangeiros (`tipo_pessoa` = PE), documento sem padrão | 21 |
+
+`tipo_pessoa` tem 11.344 PJ, 4.531 PF e 21 PE. Nenhum documento tem dígitos demais.
+
+### 5.3 Dinheiro e números em texto
+
+Nas 8 colunas abaixo não há valores vazios nem negativos (parênteses ou sinal), mas os formatos se misturam e há `R$` e espaços invisíveis até em quantidades.
+
+| Coluna | Ponto sozinho (1234.56) | Vírgula sozinha (1234,56) | 1.234,56 | 1,234.56 | Com `R$` | Com espaço invisível |
+|---|---|---|---|---|---|---|
+| `compras.valor_total_estimado` | 1.533 | 42 | 403 | 64 | 344 | 86 |
+| `compras.valor_total_homologado` | 1.523 | 36 | 406 | 77 | 346 | 77 |
+| `itens.quantidade` | 5.596 | 1.262 | 185 | 34 | 1.148 | 264 |
+| `itens.valor_unitario_estimado` | 5.475 | 953 | 536 | 113 | 1.188 | 301 |
+| `itens.valor_total_estimado` | 5.415 | 359 | 1.103 | 200 | 1.171 | 299 |
+| `resultados.quantidade_homologada` | 12.472 | 2.245 | 974 | 205 | 2.561 | 622 |
+| `resultados.valor_unitario_homologado` | 12.282 | 2.077 | 1.279 | 258 | 2.650 | 704 |
+| `resultados.valor_total_homologado` | 12.064 | 690 | 2.625 | 517 | 2.647 | 698 |
+
+Cerca de 75% a 79% dos valores aparecem com ponto sozinho, que é onde a regra de separadores do enunciado (ponto ou vírgula sozinho é sempre decimal) decide o resultado.
+
+### 5.4 Datas
+
+As datas de publicação e de homologação aparecem em 7 formatos diferentes cada, e todas são válidas (nenhuma data impossível ou fora do intervalo de 2000 a 2030).
+
+| Formato | `data_publicacao` (2.042) | `data_resultado` (15.896) |
+|---|---|---|
+| AAAA-MM-DD | | 10.301 |
+| AAAA-MM-DDTHH:MM:SS | 1.319 | |
+| DD/MM/AAAA | 117 | 929 |
+| DD/MM/AAAA com hora | 126 | 934 |
+| DD-MM-AAAA | 138 | 912 |
+| DD.MM.AAAA | 120 | 937 |
+| AAAA/MM/DD | 116 | 960 |
+| AAAAMMDD | 106 | 923 |
+
+As colunas `data_abertura_proposta` e `data_encerramento_proposta` (não usadas na fato) têm 617 vazios cada, e a de encerramento tem ainda 65 datas impossíveis ou com ano fora de 2000 a 2030.
+
+### 5.5 Nulos disfarçados e vazios
+
+Textos que significam "sem valor" (`-`, `0`, `N/A`, `NULL`, `NÃO INFORMADO`, `SEM INFORMAÇÃO`, `NÃO SE APLICA`) encontrados por coluna:
+
+| Coluna | Ocorrências | Detalhe |
+|---|---|---|
+| `compras.processo` | 77 | `-` 16, `0` 12, `N/A` 16, `NULL` 18, `NÃO INFORMADO` 5, `SEM INFORMAÇÃO` 10 |
+| `compras.modo_disputa` | 967 | `NÃO SE APLICA` 904 e 63 de outros tokens |
+| `itens.situacao_item` | 220 | `-` 29, `0` 25, `N/A` 67, `NULL` 44, `NÃO INFORMADO` 24, `SEM INFORMAÇÃO` 31 |
+| `itens.categoria_item` | 7.077 | todos `NÃO SE APLICA` (a coluna não ajuda, como o enunciado avisa) |
+| `itens.criterio_julgamento` | 1.883 | `NÃO SE APLICA` |
+| `resultados.porte` | 4.893 | `NÃO INFORMADO` 4.468 e 425 de outros tokens |
+
+O `"0"` só é nulo em campos de texto; em quantidades e valores é um número.
+
+Campos vazios: `data_abertura_proposta` e `data_encerramento_proposta` (617 cada), `unidade_medida` (9), `catalogo_codigo_item` (7.068), `ordem_classificacao_srp` (11.976, vazio vale 1 na escolha do vencedor) e `data_cancelamento` (15.834, vazio significa resultado não cancelado).
+
+### 5.6 Acentos quebrados e espaços invisíveis
+
+Acentos quebrados (UTF-8 lido como Latin-1, como `Ã§` e `Ã£`):
+
+| Coluna | Registros afetados |
 |---|---|
-| CNPJ/CPF com máscara ou sem zero à esquerda | `cnpj_orgao`, `ni_fornecedor` |
-| Dinheiro em texto (`R$`, separadores trocados, negativos entre parênteses) | valores e quantidades |
-| Datas em vários formatos | `data_publicacao`, `data_resultado` |
-| Homologação anterior à publicação | `data_resultado` (230 itens ficam sem ciclo na fato, incluindo datas ausentes) |
-| Nulos disfarçados (`N/A`, `-`, `0`, `SEM INFORMAÇÃO`…) | várias colunas |
-| Acentos quebrados (`Ã§`, `Ã£`) | textos |
+| `itens.descricao` | 116 |
+| `compras.objeto_compra` | 43 |
+| `compras.municipio` | 28 |
+| `compras.nome_unidade` | 14 |
+| `resultados.nome_fornecedor` | 1 |
+
+Espaços invisíveis (largura zero e espaço sem quebra) aparecem em 16 colunas de texto, documentos e números. Os maiores casos: `ni_fornecedor` (990), `valor_unitario_homologado` (704), `valor_total_homologado` (698), `quantidade_homologada` (622) e `nome_fornecedor` (424).
+
+### 5.7 Cronologia
+
+Comparando `data_resultado` com a `data_publicacao` da contratação, em todos os 15.896 resultados:
+
+| Situação | Resultados |
+|---|---|
+| Homologação **anterior** à publicação (impossível) | 234 |
+| Homologação no mesmo dia da publicação (válida, ciclo 0) | 1.239 |
+| Homologação posterior à publicação | 14.423 |
+| Sem data válida | 0 |
+
+Como nenhuma data está ausente, os 230 itens sem ciclo na fato correspondem a homologações anteriores à publicação entre os vencedores que permaneceram na base. Eles continuam na fato, com `data_homologacao` e `dias_ciclo` vazios (regra 7).
 
 ## 6. Limpeza (`src/limpeza.py`)
 

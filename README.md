@@ -370,6 +370,49 @@ As 5 tabelas do banco foram importadas no modo Importar e relacionadas em estrel
  
 O tempo é uma tabela Calendário criada em DAX, com limites tirados do mínimo e do máximo das datas da fato (e não digitados), e não de uma hierarquia automática de data, que foi desligada nas opções do arquivo. Ela tem colunas de ano, mês e ano-mês, com o nome do mês ordenado pelo número do mês e o ano-mês ordenado por um número AAAAMM. O Calendário se relaciona com as duas datas da fato: `data_publicacao` (relação ativa) e `data_homologacao` (inativa, usada nas medidas com `USERELATIONSHIP`). O intervalo vai até 2026, porque o ciclo máximo (611 dias) leva algumas homologações para o ano seguinte.
  
+### Medidas DAX
+ 
+As 15 medidas ficam em uma tabela própria (`Medidas`), organizadas em pastas de exibição, uma por pergunta de negócio. Todas são medidas explícitas, sem soma implícita de colunas, escritas com variáveis (`VAR`/`RETURN`) e com `CALCULATE`, `DIVIDE`, `TOPN`, `RANKX` e iteradoras (`AVERAGEX`). Os percentuais são sempre soma ÷ soma.
+ 
+| Pasta | Medida | O que calcula |
+|---|---|---|
+| P1 Economia | Valor Estimado Comparável | soma do valor estimado só dos itens comparáveis |
+| P1 Economia | Volume Homologado | soma do valor total homologado de todos os itens |
+| P1 Economia | Economia (R$) | estimado comparável menos homologado dos itens comparáveis |
+| P1 Economia | Economia % | economia ÷ estimado comparável |
+| P1 Economia | % de Itens Comparáveis | itens comparáveis ÷ total de itens |
+| P2 Fornecedores | Participação do Fornecedor % | volume do fornecedor ÷ volume total (o total ignora o filtro de fornecedor) |
+| P2 Fornecedores | Ranking do Fornecedor | posição por volume (`RANKX`), válida quando a linha é um único fornecedor |
+| P2 Fornecedores | Concentração Top 10 % | volume dos 10 maiores fornecedores (`TOPN` + `KEEPFILTERS`) ÷ volume total |
+| P3 Modalidades | Participação no Volume % | volume da linha atual ÷ volume total |
+| P3 Modalidades | Deságio vs Média Geral (p.p.) | economia % da linha menos a economia % geral, em pontos percentuais |
+| P4 Ciclo | Ciclo Médio (dias) | média dos dias entre publicação e homologação, ignorando itens sem ciclo |
+| P4 Ciclo | Ciclo Máximo (dias) | maior ciclo observado |
+| P4 Ciclo | Itens sem Ciclo | total de itens menos itens com ciclo |
+| P5 Regional | Qtd Unidades Compradoras | contagem distinta de órgãos (CNPJ) na fato |
+| P6 Perfil | Ticket Médio por Item (R$) | volume homologado ÷ quantidade de itens |
+ 
+**Decisões**
+- A economia só considera os itens comparáveis (`comparavel = 1`), como no SQL.
+- `Qtd Unidades Compradoras` conta `sk_orgao` na fato (e não na dimensão), porque o filtro de UF ou de região chega à fato e não à `dim_orgao`. Como alguns CNPJs aparecem em mais de uma UF, os valores por UF e por região não devem ser somados entre linhas.
+- `Deságio vs Média Geral` é formatada como número com uma casa decimal (pontos percentuais), e não como percentual.
+- `Ranking do Fornecedor` só mostra valor quando o contexto da linha é um único fornecedor (`ni_fornecedor`); no total, fica em branco.
+**Conferência com o SQL.** Os valores das medidas foram comparados com os resultados das consultas de `sql/02_perguntas.sql`, e todos coincidiram:
+ 
+| Medida (contexto) | Valor |
+|---|---|
+| Valor Estimado Comparável | R$ 6.867.663.469,91 |
+| Volume Homologado | R$ 8.044.498.805,74 |
+| Economia (R$) / Economia % | R$ 992.861.686,95 / 14,46% |
+| % de Itens Comparáveis | 89,08% |
+| Concentração Top 10 % | 41,43% |
+| Ranking do Fornecedor | NOW SEGUROS SA em 1º, com 13,18% do volume |
+| Ciclo Médio / Máximo / Itens sem Ciclo | 48,1 / 611 / 230 |
+| Qtd Unidades Compradoras | 363 no total; 78 no DF; 107 no Centro-Oeste |
+| Participação no Volume % (Concorrência - Eletrônica) | 58,43% |
+| Deságio vs Média Geral (Pregão - Eletrônico) | 24,02% menos 14,46% da média geral, cerca de 9,6 p.p. |
+| Ticket Médio por Item (Obras e engenharia) | R$ 5.059.320,30 |
+ 
 ## 9. Respostas às perguntas de negócio (SQL)
  
 As consultas estão em `sql/02_perguntas.sql`, e os resultados abaixo vêm da execução no banco `pncp_controladoria`. Todos os percentuais são soma ÷ soma, e a economia só considera os itens comparáveis.

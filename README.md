@@ -65,8 +65,9 @@ sql/
   01_criar_banco.sql  criação do banco e das tabelas do modelo estrela
   02_perguntas.sql    consultas das 6 perguntas de negócio
 powerbi/              arquivo .pbix do dashboard
+  img/                imagens das páginas do dashboard no PowerBI
 docs/
-  img/                imagens da documentação (modelo estrela no Power BI e figura das Sprints)
+  img/                imagens da documentação (modelo estrela, figura das Sprints e prints do dashboard)
 ```
  
 ## 4. Como reproduzir
@@ -544,6 +545,32 @@ O dashboard tem 6 páginas, uma para cada pergunta de negócio. Todas seguem a m
 | 5 Regional | Onde se gasta mais e onde há mais desconto? | Volume Homologado, Economia %, Qtd Unidades Compradoras, Participação no Volume % | 3 cartões, mapa de árvore por região e estado e gráfico de dispersão gasto × desconto por UF |
 | 6 Perfil | Em que o dinheiro público é gasto? | Volume Homologado, Economia %, Ticket Médio por Item, Participação no Volume % | 3 cartões, rosca do volume por perfil e gráfico de colunas (ticket médio) com linha (economia %) |
  
+**Prints das páginas** (visão sem filtros e com o menu fechado)
+ 
+1 Economia
+ 
+![Economia](powerbi/img/Economia.png)
+ 
+2 Fornecedores
+ 
+![Fornecedores](powerbi/img/Fornecedores.png)
+ 
+3 Modalidades
+ 
+![Modalidades](powerbi/img/Modalidades.png)
+ 
+4 Ciclo
+ 
+![Ciclo](powerbi/img/Ciclo.png)
+ 
+5 Regional
+ 
+![Regional](powerbi/img/Regional.png)
+ 
+6 Perfil
+ 
+![Perfil](powerbi/img/Perfil.png)
+ 
 **Navegação e interatividade**
 - **Menu retrátil:** em cada página, o botão ☰ abre um painel de navegação, e o ✕ o fecha. A abertura e o fechamento usam indicadores (bookmarks) por página, e o navegador de páginas destaca em laranja a página atual.
 - **Dica de ferramenta personalizada:** a página oculta *Tooltip Modalidade* aparece ao passar o mouse sobre as barras do gráfico de participação no volume (página 3), com volume homologado, economia %, % de itens comparáveis e ciclo médio da modalidade.
@@ -559,3 +586,22 @@ O dashboard tem 6 páginas, uma para cada pergunta de negócio. Todas seguem a m
 O trabalho foi organizado em Sprints no GitHub Projects, com histórias, tarefas e sub-tarefas vinculadas às issues do repositório. A figura abaixo mostra, para cada Sprint, o nome, o período, as tarefas e o status de cada uma.
  
 ![Sprints do projeto](docs/img/sprints.png)
+ 
+## 12. Melhorias futuras
+ 
+**Dados e análise**
+- **Ampliar o recorte:** a base atual é uma amostra de contratações federais de 2025. Incluir outros anos e outras esferas (estadual e municipal) permitiria comparar a evolução da economia, da concentração e do ciclo ao longo do tempo.
+- **Comparar preços de itens equivalentes:** a unidade de medida vem com grafias variadas e o código de catálogo está quase sempre vazio. Padronizar as unidades e relacionar os itens a um catálogo permitiria comparar preços unitários e identificar sobrepreço de forma mais precisa do que a razão entre homologado e estimado.
+- **Alerta de itens de valor atípico:** os 10 maiores fornecedores aparecem com um único item cada, e esses itens concentram 41,43% do volume. Um indicador de itens fora do padrão (por exemplo, valor muito acima da mediana da mesma descrição) ajudaria a priorizar a auditoria.
+- **Localidade pelo órgão:** hoje a UF vem da contratação, e alguns CNPJs aparecem em mais de uma UF. Definir a localidade a partir do cadastro do órgão evitaria essa ambiguidade na contagem de unidades compradoras.
+- **Perfil do gasto mais robusto:** o critério de obras usa quatro palavras-chave e não cobre plurais como "reformas". Ampliar a lista, ou classificar pelo catálogo oficial, e separar serviços continuados de eventuais, tornaria a divisão entre bens, serviços e obras mais confiável.
+- **Enriquecer o porte do fornecedor:** em 4.468 resultados o porte vem como "não informado". Cruzar o CNPJ com uma base cadastral permitiria analisar a concentração por porte de empresa.
+**Qualidade e engenharia**
+- **Correção na origem:** 230 itens ficam sem ciclo porque a homologação aparece anterior à publicação. Reportar esses casos aos órgãos responsáveis e validar a data na entrada evitaria a perda dessa informação.
+- **Testes automatizados:** transformar o autoteste de `src/limpeza.py` e as conferências da prova real em testes (por exemplo, com `pytest`), executados a cada alteração.
+- **Execução em um único comando e carga incremental:** orquestrar auditoria, limpeza, montagem e carga em um só ponto de entrada, carregando apenas as contratações novas em vez de recriar o banco.
+- **Ambiente reproduzível:** empacotar o MySQL e o pipeline em contêineres, para qualquer analista reproduzir o projeto sem instalar o banco.
+**Dashboard**
+- **Segmentações de dados** (modalidade, região e perfil do gasto) e navegação por detalhamento (*drill-through*) a partir de um fornecedor ou órgão.
+- **Mapa do Brasil** para a distribuição regional, no lugar do mapa de árvore.
+- **Publicação e atualização agendada** do relatório, para a Controladoria acompanhar os indicadores sem abrir o arquivo.

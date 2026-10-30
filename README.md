@@ -65,8 +65,9 @@ sql/
   01_criar_banco.sql  criação do banco e das tabelas do modelo estrela
   02_perguntas.sql    consultas das 6 perguntas de negócio
 powerbi/              arquivo .pbix do dashboard
+  img/                imagens das páginas do dashboard no PowerBI
 docs/
-  img/                imagens da documentação (modelo estrela no Power BI e figura das Sprints)
+  img/                imagens da documentação (modelo estrela, figura das Sprints e prints do dashboard)
 ```
  
 ## 4. Como reproduzir
@@ -543,6 +544,32 @@ O dashboard tem 6 páginas, uma para cada pergunta de negócio. Todas seguem a m
 | 4 Ciclo | Onde as compras demoram mais? | Ciclo Médio, Ciclo Máximo, Itens sem Ciclo, Itens com Ciclo, Qtd Unidades Compradoras | 3 cartões e tabela por órgão (5 ou mais itens com ciclo) |
 | 5 Regional | Onde se gasta mais e onde há mais desconto? | Volume Homologado, Economia %, Qtd Unidades Compradoras, Participação no Volume % | 3 cartões, mapa de árvore por região e estado e gráfico de dispersão gasto × desconto por UF |
 | 6 Perfil | Em que o dinheiro público é gasto? | Volume Homologado, Economia %, Ticket Médio por Item, Participação no Volume % | 3 cartões, rosca do volume por perfil e gráfico de colunas (ticket médio) com linha (economia %) |
+ 
+**Prints das páginas** (visão sem filtros e com o menu fechado)
+ 
+1 Economia
+ 
+![Economia](powerbi/img/Economia.png)
+ 
+2 Fornecedores
+ 
+![Fornecedores](powerbi/img/Fornecedores.png)
+ 
+3 Modalidades
+ 
+![Modalidades](powerbi/img/Modalidades.png)
+ 
+4 Ciclo
+ 
+![Ciclo](powerbi/img/Ciclo.png)
+ 
+5 Regional
+ 
+![Regional](powerbi/img/Regional.png)
+ 
+6 Perfil
+ 
+![Perfil](powerbi/img/Perfil.png)
  
 **Navegação e interatividade**
 - **Menu retrátil:** em cada página, o botão ☰ abre um painel de navegação, e o ✕ o fecha. A abertura e o fechamento usam indicadores (bookmarks) por página, e o navegador de páginas destaca em laranja a página atual.

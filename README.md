@@ -66,7 +66,7 @@ sql/
   02_perguntas.sql    consultas das 6 perguntas de negócio
 powerbi/              arquivo .pbix do dashboard
 docs/
-  img/                imagens da documentação (modelo estrela no Power BI)
+  img/                imagens da documentação (modelo estrela no Power BI e figura das Sprints)
 ```
  
 ## 4. Como reproduzir
@@ -397,6 +397,7 @@ As 15 medidas ficam em uma tabela própria (`Medidas`), organizadas em pastas de
 - `Qtd Unidades Compradoras` conta `sk_orgao` na fato (e não na dimensão), porque o filtro de UF ou de região chega à fato e não à `dim_orgao`. Como alguns CNPJs aparecem em mais de uma UF, os valores por UF e por região não devem ser somados entre linhas.
 - `Deságio vs Média Geral` é formatada como número com uma casa decimal (pontos percentuais), e não como percentual.
 - `Ranking do Fornecedor` só mostra valor quando o contexto da linha é um único fornecedor (`ni_fornecedor`); no total, fica em branco.
+- Além das 15 medidas obrigatórias, a medida auxiliar `Itens com Ciclo` (pasta P4 Ciclo) conta os itens com ciclo e permite filtrar a tabela de órgãos para mostrar só os que têm 5 ou mais itens com ciclo, como na consulta do SQL.
 **Conferência com o SQL.** Os valores das medidas foram comparados com os resultados das consultas de `sql/02_perguntas.sql`, e todos coincidiram:
  
 | Medida (contexto) | Valor |
@@ -529,3 +530,32 @@ Dez estados com maior volume:
 | Bens | 3.310 | 211.185.187,86 | 2,6% | 63.802,17 | 14,19% |
  
 **Leitura:** Obras e engenharia respondem por 60,8% do volume com apenas 967 itens, e seu ticket médio (R$ 5,06 milhões) é muito maior que o de Bens (R$ 63,8 mil). Bens são 54% dos itens (3.310 de 6.126), mas só 2,6% dos recursos. Serviços têm a maior economia entre os perfis (16,11%).
+ 
+## 10. Dashboard no Power BI
+ 
+O dashboard tem 6 páginas, uma para cada pergunta de negócio. Todas seguem a mesma estrutura: a **pergunta** como título, os **números** (cartões e visuais) e a **conclusão** em uma caixa de texto no rodapé. Os valores são os mesmos das consultas de `sql/02_perguntas.sql`.
+ 
+| Página | Pergunta | Medidas | Visuais |
+|---|---|---|---|
+| 1 Economia | Quanto o governo economizou? | Volume Homologado, Valor Estimado Comparável, Economia (R$), Economia %, % de Itens Comparáveis | 5 cartões e gráfico de colunas da economia por mês de publicação |
+| 2 Fornecedores | Quem concentra o orçamento? É um risco? | Volume Homologado, Concentração Top 10 %, Participação do Fornecedor %, Ranking do Fornecedor | 2 cartões e tabela dos 10 maiores fornecedores |
+| 3 Modalidades | Qual modalidade economiza mais e qual movimenta mais? | Volume Homologado, Economia %, % de Itens Comparáveis, Participação no Volume %, Deságio vs Média Geral (p.p.) | 3 cartões e 2 gráficos de barras (participação no volume e deságio) |
+| 4 Ciclo | Onde as compras demoram mais? | Ciclo Médio, Ciclo Máximo, Itens sem Ciclo, Itens com Ciclo, Qtd Unidades Compradoras | 3 cartões e tabela por órgão (5 ou mais itens com ciclo) |
+| 5 Regional | Onde se gasta mais e onde há mais desconto? | Volume Homologado, Economia %, Qtd Unidades Compradoras, Participação no Volume % | 3 cartões, mapa de árvore por região e estado e gráfico de dispersão gasto × desconto por UF |
+| 6 Perfil | Em que o dinheiro público é gasto? | Volume Homologado, Economia %, Ticket Médio por Item, Participação no Volume % | 3 cartões, rosca do volume por perfil e gráfico de colunas (ticket médio) com linha (economia %) |
+ 
+**Navegação e interatividade**
+- **Menu retrátil:** em cada página, o botão ☰ abre um painel de navegação, e o ✕ o fecha. A abertura e o fechamento usam indicadores (bookmarks) por página, e o navegador de páginas destaca em laranja a página atual.
+- **Dica de ferramenta personalizada:** a página oculta *Tooltip Modalidade* aparece ao passar o mouse sobre as barras do gráfico de participação no volume (página 3), com volume homologado, economia %, % de itens comparáveis e ciclo médio da modalidade.
+- **Dicas de ferramenta padrão** nos gráficos de dispersão (página 5) e de ticket médio (página 6).
+**Princípios de design (CRAP)**
+- **Contraste:** o laranja é usado só para o que responde à pergunta (por exemplo, a economia e a maior fatia), em contraste com o azul-escuro e o azul-acinzentado.
+- **Repetição:** mesmo cabeçalho, mesma grade de 1280 × 720, mesmas fontes (Segoe UI) e mesmos tamanhos em todas as páginas.
+- **Alinhamento:** posições e tamanhos definidos numericamente, com margem de 24 px e espaço de 16 px entre os blocos.
+- **Proximidade:** cada pergunta reúne seus números e visuais no mesmo bloco, com a conclusão logo abaixo.
+- Visuais escolhidos conforme a pergunta (colunas, tabelas, barras, mapa de árvore, dispersão, rosca e colunas com linha), e eixos sempre iniciando em zero.
+## 11. Planejamento em Sprints
+ 
+O trabalho foi organizado em Sprints no GitHub Projects, com histórias, tarefas e sub-tarefas vinculadas às issues do repositório. A figura abaixo mostra, para cada Sprint, o nome, o período, as tarefas e o status de cada uma.
+ 
+![Sprints do projeto](docs/img/sprints.png)

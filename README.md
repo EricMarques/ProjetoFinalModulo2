@@ -3,6 +3,8 @@
 ## Turma: Análise de Dados com Python [T2]
 ## Aluno: Eric Felipe Barros Marques
 
+> **Vídeo de defesa:** [Assista o vídeo no Google Drive](https://drive.google.com/file/d/1Rbj2z0e_zNfmlwUmoaBSF1PsjQEuC5wY/view?usp=sharing)
+
 ## 1. Contexto do problema
  
 A Controladoria identificou gargalos operacionais severos nas compras e contratações públicas federais:
@@ -605,3 +607,14 @@ O trabalho foi organizado em Sprints no GitHub Projects, com histórias, tarefas
 - **Segmentações de dados** (modalidade, região e perfil do gasto) e navegação por detalhamento (*drill-through*) a partir de um fornecedor ou órgão.
 - **Mapa do Brasil** para a distribuição regional, no lugar do mapa de árvore.
 - **Publicação e atualização agendada** do relatório, para a Controladoria acompanhar os indicadores sem abrir o arquivo.
+
+## 13. Vídeo de defesa
+ 
+Apresentação técnica do projeto em formato de Review de Sprint:
+- pipeline Python
+- modelo estrela no MySQL
+- dashboard no Power BI
+- planejamento em Sprints
+- histórico de commits.
+ 
+[Assista ao vídeo no Google Drive](https://drive.google.com/file/d/1Rbj2z0e_zNfmlwUmoaBSF1PsjQEuC5wY/view?usp=sharing)
